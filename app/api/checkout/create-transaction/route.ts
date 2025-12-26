@@ -63,36 +63,21 @@ export async function POST(req: Request) {
       const code = `EVNT-${crypto.randomBytes(6).toString("hex").toUpperCase()}`
       ticketCodes.push(code)
 
-      // Insert ticket dan cek error
-      const { data: ticket, error: ticketError } = await supabase
-        .from("tickets")
-        .insert({
-          seminar_id,
-          user_id,
-          ticket_code: code,
-          status: "pending",
-        })
-        .select()
-        .single()
-
-      if (ticketError || !ticket) {
-        return NextResponse.json({ error: "Failed to create ticket", detail: ticketError }, { status: 500 })
-      }
-
-      // Insert transaction dan cek error, serta relasi ticket_id
-      const { error: txError } = await supabase.from("transactions").insert({
+      await supabase.from("tickets").insert({
         seminar_id,
         user_id,
-        ticket_id: ticket.id,
+        ticket_code: code,
+        status: "pending",
+      })
+
+      await supabase.from("transactions").insert({
+        seminar_id,
+        user_id,
         midtrans_order_id: orderId,
         amount: seminar.price,
         payment_method: "midtrans",
         payment_status: seminar.price === 0 ? "success" : "pending",
       })
-
-      if (txError) {
-        return NextResponse.json({ error: "Failed to create transaction", detail: txError }, { status: 500 })
-      }
     }
 
     /* =======================
