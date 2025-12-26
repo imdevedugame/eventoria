@@ -117,6 +117,17 @@ export async function POST(req: Request) {
         { status: 500 }
       )
     }
+const { error: updateSeminarError } = await supabase
+      .from("seminars")
+      .update({
+        current_participants: seminar.current_participants + quantity,
+      })
+      .eq("id", seminar_id)
+
+    if (updateSeminarError) {
+       // Opsional: Handle error jika gagal update counter
+       console.error("Failed to update participants count")
+    }
 
     // ---------------------------------------------------------
     // 6. JIKA EVENT GRATIS
@@ -126,15 +137,9 @@ export async function POST(req: Request) {
       await supabase
         .from("tickets")
         .update({ status: "active" })
-        .in("id", createdTickets.map(t => t.id)) // Batch update
+        .in("id", createdTickets.map(t => t.id))
 
-      // Update kuota seminar
-      await supabase
-        .from("seminars")
-        .update({
-          current_participants: seminar.current_participants + quantity,
-        })
-        .eq("id", seminar_id)
+      // HAPUS UPDATE SEMINAR DARI SINI KARENA SUDAH DILAKUKAN DI ATAS (5.5)
 
       return NextResponse.json({
         message: "Free ticket created",
