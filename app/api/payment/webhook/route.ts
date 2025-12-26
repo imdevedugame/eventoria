@@ -1,4 +1,5 @@
 // Handler GET untuk test endpoint dari Midtrans
+export const runtime = "nodejs"
 export async function GET() {
   return NextResponse.json({ message: "Webhook endpoint OK" }, { status: 200 })
 }
