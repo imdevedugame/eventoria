@@ -16,16 +16,16 @@ export async function POST(req: Request) {
     const { seminar_id, user_id, quantity = 1 } = await req.json()
     const supabase = await getSupabaseServerClient()
 
-    /* =====================
-       GET SEMINAR
-    ===================== */
-    const { data: seminar } = await supabase
+    // ---------------------------------------------------------
+    // 1. VALIDASI SEMINAR & KUOTA
+    // ---------------------------------------------------------
+    const { data: seminar, error: seminarError } = await supabase
       .from("seminars")
       .select("*")
       .eq("id", seminar_id)
       .single()
 
-    if (!seminar) {
+    if (seminarError || !seminar) {
       return NextResponse.json({ error: "Seminar not found" }, { status: 404 })
     }
 
@@ -37,79 +37,98 @@ export async function POST(req: Request) {
       )
     }
 
-    /* =====================
-       GET USER
-    ===================== */
-    const { data: user } = await supabase
+    // ---------------------------------------------------------
+    // 2. VALIDASI USER
+    // ---------------------------------------------------------
+    const { data: user, error: userError } = await supabase
       .from("users")
       .select("*")
       .eq("id", user_id)
       .single()
 
-    if (!user) {
+    if (userError || !user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    /* =====================
-       CREATE ORDER ID
-    ===================== */
+    // ---------------------------------------------------------
+    // 3. PERSIAPAN DATA TIKET (BATCH)
+    // ---------------------------------------------------------
     const orderId = `ORDER-${Date.now()}-${crypto
       .randomBytes(4)
       .toString("hex")
       .toUpperCase()}`
 
-    const ticketCodes: string[] = []
+    // Buat array data tiket untuk di-insert sekaligus
+    const ticketsPayload = Array.from({ length: quantity }).map(() => ({
+      seminar_id,
+      user_id,
+      ticket_code: `EVNT-${crypto.randomBytes(6).toString("hex").toUpperCase()}`,
+      status: "pending",
+    }))
 
-    /* =====================
-       CREATE TICKETS + TRANSACTIONS
-    ===================== */
-    for (let i = 0; i < quantity; i++) {
-      const code = `EVNT-${crypto
-        .randomBytes(6)
-        .toString("hex")
-        .toUpperCase()}`
+    // ---------------------------------------------------------
+    // 4. EKSEKUSI INSERT TIKET
+    // ---------------------------------------------------------
+    const { data: createdTickets, error: insertTicketError } = await supabase
+      .from("tickets")
+      .insert(ticketsPayload)
+      .select() // Penting: agar kita dapat ID tiket yang baru dibuat
 
-      const { data: ticket } = await supabase
-        .from("tickets")
-        .insert({
-          seminar_id,
-          user_id,
-          ticket_code: code,
-          status: "pending",
-        })
-        .select()
-        .single()
-
-      if (!ticket) {
-        return NextResponse.json(
-          { error: "Failed to create ticket" },
-          { status: 500 }
-        )
-      }
-
-      await supabase.from("transactions").insert({
-        ticket_id: ticket.id, // 🔥 WAJIB
-        seminar_id,
-        user_id,
-        midtrans_order_id: orderId,
-        amount: seminar.price,
-        payment_method: "midtrans",
-        payment_status: "pending",
-      })
-
-      ticketCodes.push(code)
+    // 🔥 PERBAIKAN UTAMA DI SINI: Cek error spesifik
+    if (insertTicketError || !createdTickets) {
+      console.error("Ticket Insert Error:", insertTicketError)
+      return NextResponse.json(
+        { 
+          error: "Failed to create tickets", 
+          details: insertTicketError?.message || "Unknown error"
+        },
+        { status: 500 }
+      )
     }
 
-    /* =====================
-       FREE EVENT
-    ===================== */
+    const ticketCodes = createdTickets.map((t) => t.ticket_code)
+
+    // ---------------------------------------------------------
+    // 5. BUAT TRANSAKSI (Berdasarkan tiket yang berhasil dibuat)
+    // ---------------------------------------------------------
+    const transactionsPayload = createdTickets.map((ticket) => ({
+      ticket_id: ticket.id,
+      seminar_id,
+      user_id,
+      midtrans_order_id: orderId,
+      amount: seminar.price,
+      payment_method: "midtrans",
+      payment_status: "pending",
+    }))
+
+    const { error: insertTransError } = await supabase
+      .from("transactions")
+      .insert(transactionsPayload)
+
+    if (insertTransError) {
+      console.error("Transaction Insert Error:", insertTransError)
+      // Note: Idealnya kita rollback tiket di sini jika transaksi gagal,
+      // tapi untuk Supabase Client tanpa RPC, kita return error dulu.
+      return NextResponse.json(
+        { 
+          error: "Failed to create transaction record", 
+          details: insertTransError.message 
+        },
+        { status: 500 }
+      )
+    }
+
+    // ---------------------------------------------------------
+    // 6. JIKA EVENT GRATIS
+    // ---------------------------------------------------------
     if (seminar.price === 0) {
+      // Update status tiket jadi active
       await supabase
         .from("tickets")
         .update({ status: "active" })
-        .eq("seminar_id", seminar_id)
-        .eq("user_id", user_id)
+        .in("id", createdTickets.map(t => t.id)) // Batch update
 
+      // Update kuota seminar
       await supabase
         .from("seminars")
         .update({
@@ -124,9 +143,9 @@ export async function POST(req: Request) {
       })
     }
 
-    /* =====================
-       MIDTRANS SNAP
-    ===================== */
+    // ---------------------------------------------------------
+    // 7. MIDTRANS SNAP REQUEST
+    // ---------------------------------------------------------
     const payload = {
       transaction_details: {
         order_id: orderId,
@@ -141,8 +160,8 @@ export async function POST(req: Request) {
         {
           id: seminar_id,
           price: seminar.price,
-          quantity,
-          name: seminar.title,
+          quantity: quantity,
+          name: seminar.title.substring(0, 50), // Midtrans max name length safety
         },
       ],
     }
@@ -158,22 +177,27 @@ export async function POST(req: Request) {
       body: JSON.stringify(payload),
     })
 
-    const data = await response.json()
+    const midtransData = await response.json()
 
     if (!response.ok) {
+      console.error("Midtrans Error:", midtransData)
       return NextResponse.json(
-        { error: "Midtrans error", details: data },
+        { error: "Midtrans error", details: midtransData },
         { status: 500 }
       )
     }
 
     return NextResponse.json({
-      snap_token: data.token,
+      snap_token: midtransData.token,
       order_id: orderId,
       ticket_codes: ticketCodes,
     })
-  } catch (e) {
-    console.error("Checkout error:", e)
-    return NextResponse.json({ error: "Internal error" }, { status: 500 })
+
+  } catch (e: any) {
+    console.error("Global Checkout Error:", e)
+    return NextResponse.json(
+      { error: "Internal Server Error", details: e.message }, 
+      { status: 500 }
+    )
   }
 }
