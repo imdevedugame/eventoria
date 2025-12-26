@@ -3,7 +3,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server"
 import crypto from "crypto"
 
 const MIDTRANS_SERVER_KEY = process.env.MIDTRANS_SERVER_KEY || ""
-const MIDTRANS_IS_PRODUCTION = process.env.MIDTRANS_IS_PRODUCTION === "false"
+const MIDTRANS_IS_PRODUCTION = process.env.MIDTRANS_IS_PRODUCTION === "true"
 const MIDTRANS_API_URL = MIDTRANS_IS_PRODUCTION
   ? "https://app.midtrans.com/snap/v1/transactions"
   : "https://app.sandbox.midtrans.com/snap/v1/transactions"
@@ -125,7 +125,7 @@ export async function POST(request: Request) {
           .update(orderId + status_code + gross_amount + server_key)
           .digest("hex")
 
-        await fetch("https://seminar-jade-zeta.vercel.app/api/payment/webhook", {
+        await fetch("https://eventoria-iota.vercel.app/api/payment/webhook", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
