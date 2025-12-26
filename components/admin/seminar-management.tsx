@@ -17,6 +17,13 @@ interface SeminarManagementProps {
 export function SeminarManagement({ seminars }: SeminarManagementProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
 
+  // ...existing code...
+  const handleDelete = async (id: string) => {
+    if (!confirm("Yakin ingin menghapus seminar ini?")) return;
+    await fetch(`/api/admin/seminars?id=${id}`, { method: "DELETE" });
+    window.location.reload();
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -62,10 +69,18 @@ export function SeminarManagement({ seminars }: SeminarManagementProps) {
                       </Badge>
                     </div>
                   </div>
-                  <EditSeminarDialog seminar={seminar} />
+                  <div className="flex gap-2">
+                    <EditSeminarDialog seminar={seminar} />
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(seminar.id)}>
+                      Hapus
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
+                {seminar.image_url && (
+                  <img src={seminar.image_url} alt="Seminar" className="mb-2 rounded w-full max-h-48 object-cover" />
+                )}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Harga</p>

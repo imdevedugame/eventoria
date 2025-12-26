@@ -35,7 +35,9 @@ export function EditSeminarDialog({ seminar }: EditSeminarDialogProps) {
     price: seminar.price.toString(),
     max_participants: seminar.max_participants.toString(),
     status: seminar.status,
+    image_url: seminar.image_url || "",
   })
+  const [imageFile, setImageFile] = useState<File | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,17 +45,35 @@ export function EditSeminarDialog({ seminar }: EditSeminarDialogProps) {
     setError("")
 
     try {
+      let imageUrl = formData.image_url
+      if (imageFile) {
+        // Upload ke Supabase Storage
+        const fileName = `seminar-${seminar.id}-${Date.now()}`
+        const form = new FormData()
+        form.append("file", imageFile)
+        // Ganti URL berikut dengan endpoint upload Supabase Storage Anda
+        const uploadRes = await fetch("/api/admin/upload-image", {
+          method: "POST",
+          body: form,
+        })
+        const uploadData = await uploadRes.json()
+        if (uploadRes.ok && uploadData.url) {
+          imageUrl = uploadData.url
+        } else {
+          throw new Error("Gagal upload gambar")
+        }
+      }
       const response = await fetch("/api/admin/seminars", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: seminar.id,
           ...formData,
+          image_url: imageUrl,
           price: Number(formData.price),
           max_participants: Number(formData.max_participants),
         }),
       })
-
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.error || "Failed to update seminar")
@@ -82,6 +102,23 @@ export function EditSeminarDialog({ seminar }: EditSeminarDialogProps) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-image">Gambar Seminar</Label>
+                    <Input
+                      id="edit-image"
+                      type="file"
+                      accept="image/*"
+                      disabled={loading}
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setImageFile(e.target.files[0])
+                        }
+                      }}
+                    />
+                    {formData.image_url && (
+                      <img src={formData.image_url} alt="Preview" className="mt-2 rounded w-full max-h-48 object-cover" />
+                    )}
+                  </div>
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />

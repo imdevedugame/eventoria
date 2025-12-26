@@ -34,29 +34,44 @@ export function CreateSeminarDialog({ open, onOpenChange }: CreateSeminarDialogP
     location: "",
     price: "",
     max_participants: "",
+    image_url: "",
   })
+  const [imageFile, setImageFile] = useState<File | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError("")
-
     try {
+      let imageUrl = formData.image_url
+      if (imageFile) {
+        const form = new FormData()
+        form.append("file", imageFile)
+        const uploadRes = await fetch("/api/admin/upload-image", {
+          method: "POST",
+          body: form,
+        })
+        const uploadData = await uploadRes.json()
+        if (uploadRes.ok && uploadData.url) {
+          imageUrl = uploadData.url
+        } else {
+          throw new Error("Gagal upload gambar")
+        }
+      }
       const response = await fetch("/api/admin/seminars", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          image_url: imageUrl,
           price: Number(formData.price),
           max_participants: Number(formData.max_participants),
         }),
       })
-
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.error || "Failed to create seminar")
       }
-
       onOpenChange(false)
       router.refresh()
       setFormData({
@@ -68,7 +83,9 @@ export function CreateSeminarDialog({ open, onOpenChange }: CreateSeminarDialogP
         location: "",
         price: "",
         max_participants: "",
+        image_url: "",
       })
+      setImageFile(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
@@ -110,41 +127,36 @@ export function CreateSeminarDialog({ open, onOpenChange }: CreateSeminarDialogP
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               required
               disabled={loading}
-              rows={4}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="category">Kategori *</Label>
-              <Select
-                value={formData.category}
-                onValueChange={(value) => setFormData({ ...formData, category: value as SeminarCategory })}
-                disabled={loading}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="create-image">Gambar Seminar</Label>
+            <Input
+              id="create-image"
+              type="file"
+              accept="image/*"
+              disabled={loading}
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setImageFile(e.target.files[0])
+                }
+              }}
+            />
+            {imageFile && (
+              <img src={URL.createObjectURL(imageFile)} alt="Preview" className="mt-2 rounded w-full max-h-48 object-cover" />
+            )}
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="speaker">Pembicara *</Label>
-              <Input
-                id="speaker"
-                value={formData.speaker}
-                onChange={(e) => setFormData({ ...formData, speaker: e.target.value })}
-                required
-                disabled={loading}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="speaker">Pembicara *</Label>
+            <Input
+              id="speaker"
+              value={formData.speaker}
+              onChange={(e) => setFormData({ ...formData, speaker: e.target.value })}
+              required
+              disabled={loading}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
