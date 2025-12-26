@@ -1,0 +1,55 @@
+{
+  "info": {
+    "_postman_id": "b1e1e1e1-1234-5678-9abc-def012345678",
+    "name": "Eventoria Seminar Platform API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Transaction (Checkout)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"seminar_id\": \"ISI_ID_SEMINAR\",\n  \"user_id\": \"ISI_ID_USER\",\n  \"quantity\": 1\n}"
+        },
+        "url": {
+          "raw": "https://seminar-jade-zeta.vercel.app/api/checkout/create-transaction",
+          "protocol": "https",
+          "host": ["seminar-jade-zeta", "vercel", "app"],
+          "path": ["api", "checkout", "create-transaction"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Webhook Payment Notification (Manual Test)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"order_id\": \"ISI_ORDER_ID\",\n  \"transaction_status\": \"settlement\",\n  \"fraud_status\": \"accept\",\n  \"status_code\": \"200\",\n  \"gross_amount\": \"ISI_GROSS_AMOUNT\",\n  \"signature_key\": \"ISI_SIGNATURE_KEY\",\n  \"transaction_id\": \"SIMULATED\"\n}"
+        },
+        "url": {
+          "raw": "https://seminar-jade-zeta.vercel.app/api/payment/webhook",
+          "protocol": "https",
+          "host": ["seminar-jade-zeta", "vercel", "app"],
+          "path": ["api", "payment", "webhook"]
+        }
+      },
+      "response": []
+    }
+  ]
+}

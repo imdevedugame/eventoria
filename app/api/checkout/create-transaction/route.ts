@@ -16,9 +16,9 @@ export async function POST(req: Request) {
     const { seminar_id, user_id, quantity = 1 } = await req.json()
     const supabase = await getSupabaseServerClient()
 
-    /* =======================
-       1. GET SEMINAR
-    ======================= */
+    /* =====================
+       GET SEMINAR
+    ===================== */
     const { data: seminar } = await supabase
       .from("seminars")
       .select("*")
@@ -37,9 +37,9 @@ export async function POST(req: Request) {
       )
     }
 
-    /* =======================
-       2. GET USER
-    ======================= */
+    /* =====================
+       GET USER
+    ===================== */
     const { data: user } = await supabase
       .from("users")
       .select("*")
@@ -50,52 +50,72 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    /* =======================
-       3. CREATE ORDER ID
-    ======================= */
-    const orderId = `ORDER-${Date.now()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`
+    /* =====================
+       CREATE ORDER ID
+    ===================== */
+    const orderId = `ORDER-${Date.now()}-${crypto
+      .randomBytes(4)
+      .toString("hex")
+      .toUpperCase()}`
+
     const ticketCodes: string[] = []
 
-    /* =======================
-       4. CREATE TICKETS (PENDING)
-    ======================= */
+    /* =====================
+       CREATE TICKETS + TRANSACTIONS
+    ===================== */
     for (let i = 0; i < quantity; i++) {
-      const code = `EVNT-${crypto.randomBytes(6).toString("hex").toUpperCase()}`
-      ticketCodes.push(code)
+      const code = `EVNT-${crypto
+        .randomBytes(6)
+        .toString("hex")
+        .toUpperCase()}`
 
-      await supabase.from("tickets").insert({
-        seminar_id,
-        user_id,
-        ticket_code: code,
-        status: "pending",
-      })
+      const { data: ticket } = await supabase
+        .from("tickets")
+        .insert({
+          seminar_id,
+          user_id,
+          ticket_code: code,
+          status: "pending",
+        })
+        .select()
+        .single()
+
+      if (!ticket) {
+        return NextResponse.json(
+          { error: "Failed to create ticket" },
+          { status: 500 }
+        )
+      }
 
       await supabase.from("transactions").insert({
+        ticket_id: ticket.id, // 🔥 WAJIB
         seminar_id,
         user_id,
         midtrans_order_id: orderId,
         amount: seminar.price,
         payment_method: "midtrans",
-        payment_status: seminar.price === 0 ? "success" : "pending",
+        payment_status: "pending",
       })
+
+      ticketCodes.push(code)
     }
 
-    /* =======================
-       5. FREE EVENT
-    ======================= */
+    /* =====================
+       FREE EVENT
+    ===================== */
     if (seminar.price === 0) {
+      await supabase
+        .from("tickets")
+        .update({ status: "active" })
+        .eq("seminar_id", seminar_id)
+        .eq("user_id", user_id)
+
       await supabase
         .from("seminars")
         .update({
           current_participants: seminar.current_participants + quantity,
         })
         .eq("id", seminar_id)
-
-      await supabase
-        .from("tickets")
-        .update({ status: "active" })
-        .eq("seminar_id", seminar_id)
-        .eq("user_id", user_id)
 
       return NextResponse.json({
         message: "Free ticket created",
@@ -104,9 +124,9 @@ export async function POST(req: Request) {
       })
     }
 
-    /* =======================
-       6. MIDTRANS SNAP
-    ======================= */
+    /* =====================
+       MIDTRANS SNAP
+    ===================== */
     const payload = {
       transaction_details: {
         order_id: orderId,
@@ -141,7 +161,10 @@ export async function POST(req: Request) {
     const data = await response.json()
 
     if (!response.ok) {
-      return NextResponse.json({ error: "Midtrans error" }, { status: 500 })
+      return NextResponse.json(
+        { error: "Midtrans error", details: data },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({

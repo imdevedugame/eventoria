@@ -10,23 +10,23 @@ export async function POST(req: Request) {
   try {
     const notification = await req.json()
 
-    // TEST NOTIFICATION → SELALU OK
+    // TEST NOTIFICATION
     if (!notification?.order_id) {
       return NextResponse.json({ message: "Test OK" }, { status: 200 })
     }
 
-    const signature = crypto
+    const calculatedSignature = crypto
       .createHash("sha512")
       .update(
         notification.order_id +
-        notification.status_code +
-        notification.gross_amount +
-        SERVER_KEY
+          notification.status_code +
+          notification.gross_amount +
+          SERVER_KEY
       )
       .digest("hex")
 
-    // Signature salah → IGNORE, tapi tetap 200
-    if (signature !== notification.signature_key) {
+    // Signature invalid → IGNORE
+    if (calculatedSignature !== notification.signature_key) {
       console.warn("Invalid signature", notification)
       return NextResponse.json({ message: "Ignored" }, { status: 200 })
     }
@@ -58,9 +58,9 @@ export async function POST(req: Request) {
       status = "failed"
     }
 
-    /* =======================
+    /* =====================
        UPDATE TRANSACTION
-    ======================= */
+    ===================== */
     await supabase
       .from("transactions")
       .update({
@@ -69,27 +69,34 @@ export async function POST(req: Request) {
       })
       .eq("midtrans_order_id", notification.order_id)
 
-    /* =======================
+    /* =====================
        UPDATE TICKET
-    ======================= */
+    ===================== */
+    const ticketIds = transactions.map((t) => t.ticket_id)
+
     if (status === "success") {
-      await supabase
-        .from("tickets")
-        .update({ status: "active" })
-        .in(
-          "id",
-          transactions.map(t => t.ticket_id)
-        )
+      await supabase.from("tickets").update({ status: "active" }).in("id", ticketIds)
+
+      // Fetch current participants
+      const { data: seminarData, error: seminarError } = await supabase
+        .from("seminars")
+        .select("current_participants")
+        .eq("id", transactions[0].seminar_id)
+        .single();
+
+      if (!seminarError && seminarData) {
+        const newParticipants = (seminarData.current_participants || 0) + ticketIds.length;
+        await supabase
+          .from("seminars")
+          .update({
+            current_participants: newParticipants,
+          })
+          .eq("id", transactions[0].seminar_id);
+      }
     }
 
     if (status === "failed") {
-      await supabase
-        .from("tickets")
-        .delete()
-        .in(
-          "id",
-          transactions.map(t => t.ticket_id)
-        )
+      await supabase.from("tickets").delete().in("id", ticketIds)
     }
 
     return NextResponse.json({ message: "OK" }, { status: 200 })
