@@ -117,18 +117,19 @@ export async function POST(req: Request) {
         { status: 500 }
       )
     }
-const { error: updateSeminarError } = await supabase
-      .from("seminars")
-      .update({
-        current_participants: seminar.current_participants + quantity,
-      })
-      .eq("id", seminar_id)
 
-    if (updateSeminarError) {
-       // Opsional: Handle error jika gagal update counter
-       console.error("Failed to update participants count")
+    // ---------------------------------------------------------
+    // 5.5. UPDATE KUOTA VIA RPC (Atomic & Bypass RLS)
+    // ---------------------------------------------------------
+    const { error: rpcError } = await supabase.rpc("increment_participants", {
+      p_seminar_id: seminar_id,
+      p_quantity: quantity,
+    })
+
+    if (rpcError) {
+      console.error("Gagal update kuota:", rpcError)
+      // Opsional: return error jika mau strict, atau biarkan lanjut
     }
-
     // ---------------------------------------------------------
     // 6. JIKA EVENT GRATIS
     // ---------------------------------------------------------
