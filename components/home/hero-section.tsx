@@ -14,11 +14,10 @@ export function HeroSection() {
               </span>
             </div>
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-balance leading-tight">
-              Tingkatkan Pengetahuan Anda Bersama <span className="text-primary">Eventoria</span>
+              Selamat Datang di <span className="text-primary">Eventoria</span>
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed text-pretty max-w-2xl">
-              Platform lengkap untuk menemukan, mendaftar, dan mengikuti berbagai seminar berkualitas tinggi. Dari
-              kesehatan, pendidikan, hingga pengembangan profesional - semua ada di sini.
+              Temukan berbagai seminar menarik seputar pengembangan diri, kesehatan, hingga promosi kampus! Pilih kategori favoritmu dan jangan lewatkan kesempatan untuk berkembang bersama Eventoria .
             </p>
             <div className="flex flex-wrap gap-4">
               <Button asChild size="lg" className="gap-2">

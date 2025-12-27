@@ -32,7 +32,8 @@ export function Navbar() {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity">
-          <Ticket className="h-6 w-6" />
+          {/* Logo placeholder: replace src with your logo file path */}
+          <img src="/IMG-20251222-WA0017.png" alt="Eventoria Logo" className="h-15 w-15 object-contain" />
           <span className="text-xl font-bold">Eventoria</span>
         </Link>
 

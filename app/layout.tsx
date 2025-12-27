@@ -31,7 +31,6 @@ export const metadata: Metadata = {
     apple: "/apple-icon.png",
   },
 }
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -39,11 +38,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="font-sans antialiased min-h-screen ">
+      {/* KEMBALIKAN KE BERSIH SEPERTI INI */}
+      {/* Hapus 'flex', 'flex-col', 'items-center', 'justify-center' */}
+      
+      <body className="font-sans antialiased min-h-screen bg-background">
+        <center>
         <AuthProvider>
           {children}
           <Analytics />
         </AuthProvider>
+        </center>
       </body>
     </html>
   )

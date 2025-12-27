@@ -30,7 +30,7 @@ export function Footer() {
                 </Link>
               </Button>
               <Button size="icon" variant="outline" asChild>
-                <Link href="#" aria-label="Instagram">
+                <Link href="https://instagram.com/mysaa.la" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
                   <Instagram className="h-4 w-4" />
                 </Link>
               </Button>
@@ -129,7 +129,7 @@ export function Footer() {
               </div>
               <div className="flex items-start gap-2">
                 <Phone className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span>+62 812-3456-7890</span>
+                <span>+62 821-3367-8015</span>
               </div>
               <div className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
