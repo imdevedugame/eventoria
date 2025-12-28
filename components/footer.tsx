@@ -30,7 +30,7 @@ export function Footer() {
                 </Link>
               </Button>
               <Button size="icon" variant="outline" asChild>
-                <Link href="https://instagram.com/mysaa.la" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
+                <Link href="https://instagram.com/eventoria2025" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
                   <Instagram className="h-4 w-4" />
                 </Link>
               </Button>
