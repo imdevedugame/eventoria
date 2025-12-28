@@ -125,7 +125,7 @@ export function Footer() {
             <div className="space-y-3 text-sm text-muted-foreground">
               <div className="flex items-start gap-2">
                 <Mail className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span>support@eventoria.id</span>
+                <span>eventoriaria@gmail.com</span>
               </div>
               <div className="flex items-start gap-2">
                 <Phone className="h-4 w-4 mt-0.5 flex-shrink-0" />
@@ -133,7 +133,7 @@ export function Footer() {
               </div>
               <div className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span>Jakarta, Indonesia</span>
+                <span>Semarang, Indonesia</span>
               </div>
             </div>
             <div className="space-y-2 pt-2">
