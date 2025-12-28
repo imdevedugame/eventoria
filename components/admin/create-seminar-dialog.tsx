@@ -37,6 +37,10 @@ export function CreateSeminarDialog({ open, onOpenChange }: CreateSeminarDialogP
     image_url: "",
   })
   const [imageFile, setImageFile] = useState<File | null>(null)
+  // Media partner logo upload state
+  const [mediaPartnerFiles, setMediaPartnerFiles] = useState<File[]>([])
+  const [mediaPartnerUrls, setMediaPartnerUrls] = useState<string[]>([])
+  const [mediaPartnerUploading, setMediaPartnerUploading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,6 +62,28 @@ export function CreateSeminarDialog({ open, onOpenChange }: CreateSeminarDialogP
           throw new Error("Gagal upload gambar")
         }
       }
+      // Upload all media partner logos if any
+      let uploadedMediaPartnerUrls = [...mediaPartnerUrls]
+      if (mediaPartnerFiles.length > 0) {
+        setMediaPartnerUploading(true)
+        uploadedMediaPartnerUrls = []
+        for (const file of mediaPartnerFiles) {
+          const form = new FormData()
+          form.append("file", file)
+          const uploadRes = await fetch("/api/admin/upload-media-partner-logo", {
+            method: "POST",
+            body: form,
+          })
+          const uploadData = await uploadRes.json()
+          if (uploadRes.ok && uploadData.url) {
+            uploadedMediaPartnerUrls.push(uploadData.url)
+          } else {
+            throw new Error("Gagal upload logo media partner")
+          }
+        }
+        setMediaPartnerUploading(false)
+        setMediaPartnerUrls(uploadedMediaPartnerUrls)
+      }
       const response = await fetch("/api/admin/seminars", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -66,6 +92,7 @@ export function CreateSeminarDialog({ open, onOpenChange }: CreateSeminarDialogP
           image_url: imageUrl,
           price: Number(formData.price),
           max_participants: Number(formData.max_participants),
+          media_partner_logos: uploadedMediaPartnerUrls,
         }),
       })
       if (!response.ok) {
@@ -86,10 +113,13 @@ export function CreateSeminarDialog({ open, onOpenChange }: CreateSeminarDialogP
         image_url: "",
       })
       setImageFile(null)
+      setMediaPartnerFiles([])
+      setMediaPartnerUrls([])
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
       setLoading(false)
+      setMediaPartnerUploading(false)
     }
   }
 
@@ -146,6 +176,42 @@ export function CreateSeminarDialog({ open, onOpenChange }: CreateSeminarDialogP
             {imageFile && (
               <img src={URL.createObjectURL(imageFile)} alt="Preview" className="mt-2 rounded w-full max-h-48 object-cover" />
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="media-partner-logos">Logo Media Partner (bisa lebih dari satu)</Label>
+            <Input
+              id="media-partner-logos"
+              type="file"
+              accept="image/*"
+              multiple
+              disabled={loading || mediaPartnerUploading}
+              onChange={(e) => {
+                if (e.target.files) {
+                  setMediaPartnerFiles(Array.from(e.target.files))
+                }
+              }}
+            />
+            <div className="flex flex-wrap gap-2 mt-2">
+              {mediaPartnerFiles.map((file, idx) => (
+                <img
+                  key={idx}
+                  src={URL.createObjectURL(file)}
+                  alt={`Logo Media Partner ${idx + 1}`}
+                  className="w-16 h-16 object-contain border rounded bg-white"
+                />
+              ))}
+              {/* Show uploaded URLs if any (after submit) */}
+              {mediaPartnerFiles.length === 0 && mediaPartnerUrls.map((url, idx) => (
+                <img
+                  key={idx}
+                  src={url}
+                  alt={`Logo Media Partner ${idx + 1}`}
+                  className="w-16 h-16 object-contain border rounded bg-white"
+                />
+              ))}
+            </div>
+            {mediaPartnerUploading && <div className="text-xs text-gray-500">Mengupload logo media partner...</div>}
           </div>
 
           <div className="space-y-2">

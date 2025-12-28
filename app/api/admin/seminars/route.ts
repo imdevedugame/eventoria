@@ -11,7 +11,9 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { title, description, category, speaker, event_date, location, price, max_participants, image_url } = body
+    const { title, description, category, speaker, event_date, location, price, max_participants, image_url, media_partner_logos } = body
+
+    // media_partner_logos: array of logo URLs (string[])
 
     const supabase = await getSupabaseServerClient()
 
@@ -29,6 +31,7 @@ export async function POST(request: Request) {
         created_by: user.id,
         status: "active",
         image_url,
+        media_partner_logos, // store as array or JSONB in DB
       })
       .select()
       .single()
@@ -53,7 +56,9 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json()
-    const { id, title, description, category, speaker, event_date, location, price, max_participants, status, image_url } = body
+    const { id, title, description, category, speaker, event_date, location, price, max_participants, status, image_url, media_partner_logos } = body
+
+    // media_partner_logos: array of logo URLs (string[])
 
     const supabase = await getSupabaseServerClient()
 
@@ -70,6 +75,7 @@ export async function PUT(request: Request) {
         max_participants,
         status,
         image_url,
+        media_partner_logos, // store as array or JSONB in DB
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)

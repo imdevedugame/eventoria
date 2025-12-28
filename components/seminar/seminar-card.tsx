@@ -9,6 +9,7 @@ import Image from "next/image"
 
 interface SeminarCardProps {
   seminar: Seminar
+  
 }
 
 export function SeminarCard({ seminar }: SeminarCardProps) {
@@ -41,6 +42,22 @@ export function SeminarCard({ seminar }: SeminarCardProps) {
             {CATEGORY_LABELS[seminar.category]}
           </Badge>
         </div>
+        {/* Media partner logos */}
+        {Array.isArray(seminar.media_partner_logos) && seminar.media_partner_logos.length > 0 && (
+          <div className="absolute bottom-2 left-2 right-2 flex flex-row gap-2 items-center bg-background/70 rounded px-2 py-1 backdrop-blur-sm">
+            {seminar.media_partner_logos.map((logo: string, idx: number) => (
+              <Image
+                key={idx}
+                src={logo}
+                alt={`Media Partner ${idx + 1}`}
+                width={28}
+                height={28}
+                className="object-contain rounded bg-white border shadow-sm"
+                style={{ maxWidth: 28, maxHeight: 28 }}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <CardContent className="pt-4 space-y-3">

@@ -29,6 +29,7 @@ export interface Seminar {
   created_by?: string
   created_at: string
   updated_at: string
+  media_partner_logos?: string[]; // Add this line
 }
 
 export type TicketStatus = "active" | "used" | "cancelled"
